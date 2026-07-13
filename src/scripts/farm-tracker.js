@@ -95,10 +95,7 @@ function escapeHtml(str) {
 function getBaseName(itemName) {
     let cached = baseNameCache.get(itemName);
     if (cached !== undefined) return cached;
-    cached = itemName.replace(
-        /\s*\((Class|Armor|Helm|Cape|Weapon|Pet|Misc|Necklace|Sword|Dagger|Axe|Mace|Polearm|Staff|Wand|Bow|Gun|0 AC|AC|Legend|Non-Legend|Merge|Rare|VIP|Monster)\)/gi,
-        ""
-    ).trim();
+    cached = stripWikiItemSuffix(itemName);
     baseNameCache.set(itemName, cached);
     return cached;
 }
@@ -213,12 +210,12 @@ function buildCacheKey(tab) {
 }
 
 function isOwned(name) {
-    return accountItemSet.has(getBaseName(name));
+    return accountItemSet.has(getInventoryKey(name));
 }
 
 function getOwnershipBadge(name) {
-    const baseName = getBaseName(name);
-    const items = accountByName[baseName];
+    const itemKey = getInventoryKey(name);
+    const items = accountByName[itemKey];
     if (!items || items.length === 0) return "";
     for (let i = 0; i < items.length; i++) {
         const loc = items[i].location;
@@ -231,8 +228,8 @@ function getOwnershipBadge(name) {
 }
 
 function getOwnedAmount(name) {
-    const baseName = getBaseName(name);
-    const items = accountByName[baseName];
+    const itemKey = getInventoryKey(name);
+    const items = accountByName[itemKey];
     if (!items) return 0;
     let sum = 0;
     for (let i = 0; i < items.length; i++) sum += (parseInt(items[i].quantity, 10) || 1);
@@ -688,7 +685,8 @@ function buildToDropItems() {
 
     for (const [name, data] of Object.entries(wikiData)) {
         const baseName = getBaseName(name);
-        if (seen.has(baseName) || accountItemSet.has(baseName)) continue;
+        const itemKey = getInventoryKey(name);
+        if (seen.has(itemKey) || accountItemSet.has(itemKey)) continue;
 
         const tags = getItemTags(data);
         if (tags.includes("rare") || !passesTagFilter(tags)) continue;
@@ -697,7 +695,7 @@ function buildToDropItems() {
         if (!Array.isArray(priceData) || priceData[0] !== "Drop") continue;
         if (!matchSearch([name, priceData[1] || ""])) continue;
 
-        seen.add(baseName);
+        seen.add(itemKey);
         items.push([name, data]);
     }
 
@@ -1089,7 +1087,8 @@ function buildInBankItems() {
         if (!item.location || !item.location.toLowerCase().includes("bank")) continue;
 
         const baseName = getBaseName(item.name);
-        if (seen.has(baseName)) continue;
+        const itemKey = getInventoryKey(item);
+        if (seen.has(itemKey)) continue;
 
         const itemData = resolveItemData(baseName) || resolveItemData(item.name);
         if (!itemData) continue;
@@ -1107,7 +1106,7 @@ function buildInBankItems() {
 
         if (!matchSearch([baseName])) continue;
 
-        seen.add(baseName);
+        seen.add(itemKey);
         items.push([baseName, itemData]);
     }
 
@@ -1160,14 +1159,15 @@ function buildCompletedStats() {
 
     for (const [name, data] of Object.entries(wikiData)) {
         const baseName = getBaseName(name);
-        if (seen.has(baseName)) continue;
-        seen.add(baseName);
+        const itemKey = getInventoryKey(name);
+        if (seen.has(itemKey)) continue;
+        seen.add(itemKey);
 
         const tags = getItemTags(data);
         if (tags.includes("rare")) continue;
 
         totalItems++;
-        const owned = accountItemSet.has(baseName);
+        const owned = accountItemSet.has(itemKey);
         if (owned) ownedItems++;
         if (tags.includes("ac")) { totalAC++; if (owned) ownedAC++; }
         if (tags.includes("seasonal")) { totalSeasonal++; if (owned) ownedSeasonal++; }
@@ -1498,13 +1498,13 @@ async function loadAllData() {
 
         chrome.storage.local.get(["savedInventory"], (result) => {
             accountItems = result.savedInventory || [];
-            accountItemSet = new Set(accountItems.map(item => getBaseName(item.name)));
+            accountItemSet = new Set(accountItems.map(item => getInventoryKey(item)));
 
             accountByName = {};
             for (let i = 0; i < accountItems.length; i++) {
-                const baseName = getBaseName(accountItems[i].name);
-                if (!accountByName[baseName]) accountByName[baseName] = [];
-                accountByName[baseName].push(accountItems[i]);
+                const itemKey = getInventoryKey(accountItems[i]);
+                if (!accountByName[itemKey]) accountByName[itemKey] = [];
+                accountByName[itemKey].push(accountItems[i]);
             }
 
             document.body.classList.remove("is-loading");

@@ -24,10 +24,7 @@ function escapeHtml(str) {
  * @returns {string} Cleaned base name suitable for cross-source matching.
  */
 function getBaseName(itemName) {
-    return itemName.replace(
-        /\s*\((Class|Armor|Helm|Cape|Weapon|Pet|Misc|Necklace|Sword|Dagger|Axe|Mace|Polearm|Staff|Wand|Bow|Gun|0 AC|AC|Legend|Non-Legend|Merge|Rare|VIP|Monster)\)/gi,
-        ""
-    ).trim();
+    return stripWikiItemSuffix(itemName);
 }
 
 const IS_MANAGE_ACCOUNT = window.location.href.includes("account.aq.com/AQW/Inventory");
@@ -374,8 +371,8 @@ if (isMergePage || isQuestPage) {
         const inventoryCount = {};
         if (Array.isArray(rawInventory)) {
             rawInventory.forEach(item => {
-                const cleanName = getBaseName(item.name);
-                inventoryCount[cleanName] = (inventoryCount[cleanName] || 0) + parseInt(item.quantity || 1, 10);
+                const itemKey = getInventoryKey(item);
+                inventoryCount[itemKey] = (inventoryCount[itemKey] || 0) + parseInt(item.quantity || 1, 10);
             });
         }
 
@@ -417,8 +414,9 @@ if (isMergePage || isQuestPage) {
 
                 countItems++;
                 const cleanShopName = getBaseName(itemLink.textContent);
+                const cleanShopKey = getInventoryKey(cleanShopName);
 
-                if (inventoryCount[cleanShopName]) {
+                if (inventoryCount[cleanShopKey]) {
                     ownedShopItems++;
                     return;
                 }
@@ -551,7 +549,7 @@ if (isMergePage || isQuestPage) {
                 let totalMaterialsGathered = 0;
 
                 for (const [material, totalNeeded] of Object.entries(requiredTotals)) {
-                    const qtyInInventory = inventoryCount[material] || 0;
+                    const qtyInInventory = inventoryCount[getInventoryKey(material)] || 0;
                     totalMaterialsNeeded += totalNeeded;
                     totalMaterialsGathered += Math.min(qtyInInventory, totalNeeded);
                 }
@@ -579,7 +577,7 @@ if (isMergePage || isQuestPage) {
                         <tbody>`;
 
                 for (const [material, totalNeeded] of Object.entries(requiredTotals)) {
-                    const qtyInInventory = inventoryCount[material] || 0;
+                    const qtyInInventory = inventoryCount[getInventoryKey(material)] || 0;
                     const missingQty = Math.max(0, totalNeeded - qtyInInventory);
                     const statusCls = missingQty === 0 ? "ready" : "missing";
                     const missingText = missingQty === 0 ? "Ready" : `${missingQty}`;
@@ -741,7 +739,7 @@ if (IS_CHAR_PAGE) {
         const inventory = result.savedInventory;
         if (!inventory || inventory.length === 0) return;
 
-        const inventoryNames = new Set(inventory.map(item => getBaseName(item.name)));
+        const inventoryNames = new Set(inventory.map(item => getInventoryKey(item)));
 
         let debounceTimer;
         function markOwnedItems() {
@@ -753,8 +751,9 @@ if (IS_CHAR_PAGE) {
                 link.classList.add("link-style");
 
                 const itemName = link.textContent.trim().replace(/\s*\(Rank\s+\d+\)/i, "").trim();
+                const itemKey = getInventoryKey(itemName);
 
-                if (inventoryNames.has(itemName)) {
+                if (inventoryNames.has(itemKey)) {
                     const icon = document.createElement("span");
                     icon.textContent = " [Owned]";
                     icon.className = "aqwt-owned-badge";
@@ -784,33 +783,26 @@ chrome.storage.local.get(["savedInventory"], (result) => {
     const rawInventory = result.savedInventory;
     if (!rawInventory || rawInventory.length === 0) return;
 
-    const inventoryNames = new Set(rawInventory.map(item => getBaseName(item.name)));
+    const inventoryLocations = new Map();
+    rawInventory.forEach(item => {
+        const key = getInventoryKey(item);
+        const isBank = String(item.location || "").toLowerCase().includes("bank");
+        if (!inventoryLocations.has(key) || isBank) inventoryLocations.set(key, isBank ? "Bank" : "Inventory");
+    });
 
     const wikiPageTitle = document.querySelector("#page-title");
     const wikiLinks = document.querySelectorAll("#page-content a");
 
     wikiLinks.forEach(link => {
-        const itemName = getBaseName(link.textContent);
-
-        if (inventoryNames.has(itemName)) {
-            if (rawInventory.some(item => getBaseName(item.name) === itemName && item.location.toLowerCase().includes("bank"))) {
-                haveItem(link, "Bank");
-            } else {
-                haveItem(link, "Inventory");
-            }
-        }
+        const itemKey = getInventoryKey(link.textContent);
+        const location = inventoryLocations.get(itemKey);
+        if (location) haveItem(link, location);
     });
 
     if (wikiPageTitle) {
-        const cleanTitle = getBaseName(wikiPageTitle.textContent);
-
-        if (inventoryNames.has(cleanTitle)) {
-            if (rawInventory.some(item => getBaseName(item.name) === cleanTitle && item.location.toLowerCase().includes("bank"))) {
-                haveItem(wikiPageTitle, "Bank");
-            } else {
-                haveItem(wikiPageTitle, "Inventory");
-            }
-        }
+        const titleKey = getInventoryKey(wikiPageTitle.textContent);
+        const location = inventoryLocations.get(titleKey);
+        if (location) haveItem(wikiPageTitle, location);
     }
 
     // Collection Chests progress tracker
@@ -823,7 +815,7 @@ chrome.storage.local.get(["savedInventory"], (result) => {
             const chestName = getBaseName(link.textContent);
             if (chestName) {
                 totalChests++;
-                if (inventoryNames.has(chestName)) ownedChests++;
+                if (inventoryLocations.has(getInventoryKey(chestName))) ownedChests++;
             }
         });
 
