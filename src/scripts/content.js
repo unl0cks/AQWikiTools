@@ -182,7 +182,11 @@ async function getImage(url, attempt = 1) {
             }
 
             try {
-                const doc = new DOMParser().parseFromString(response.html, "text/html");
+                // Parse as an inert fragment. Firefox can lose the live page's
+                // Wikidot styles when a fetched full document is parsed with DOMParser.
+                const template = document.createElement("template");
+                template.innerHTML = response.html;
+                const doc = template.content;
                 let foundImages = [];
 
                 const imgMale = doc.querySelector("#wiki-tab-0-0 img");
