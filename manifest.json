@@ -1,9 +1,11 @@
 {
     "manifest_version": 3,
     "name": "AQWikiTools",
-    "version": "3.0.1",
+    "version": "3.0.2",
     "description": "Enhances the AQW Wiki and account pages with item previews, merge/quest calculators, inventory tracking, farm lists, and server boost alerts.",
-    "permissions": ["storage"],
+    "permissions": [
+        "storage"
+    ],
     "host_permissions": [
         "https://www.artix.com/*"
     ],
@@ -12,14 +14,30 @@
     },
     "content_scripts": [
         {
-            "matches": ["*://aqwwiki.wikidot.com/*"],
-            "css": ["src/styles/content.css"],
-            "js": ["src/scripts/content.js"]
+            "matches": [
+                "*://aqwwiki.wikidot.com/*"
+            ],
+            "css": [
+                "src/styles/content.css"
+            ],
+            "js": [
+                "src/scripts/inventory-matching.js",
+                "src/scripts/content.js"
+            ]
         },
         {
-            "matches": ["*://account.aq.com/*"],
-            "css": ["src/styles/content.css"],
-            "js": ["src/scripts/content.js", "src/scripts/inventory-sync.js"]
+            "matches": [
+                "*://account.aq.com/*"
+            ],
+            "css": [
+                "src/styles/content.css"
+            ],
+            "js": [
+                "src/scripts/inventory-matching.js",
+                "src/scripts/content.js",
+                "src/scripts/ProcessAcountItems.js",
+                "src/scripts/main.js"
+            ]
         }
     ],
     "background": {
@@ -42,7 +60,8 @@
                 "assets/images/xp-boost.png",
                 "assets/images/rep-boost.png",
                 "assets/images/class-boost.png",
-                "data/drop_rates.json"
+                "data/drop_rates.json",
+                "data/Unidentified_Translation.json"
             ],
             "matches": [
                 "*://aqwwiki.wikidot.com/*",

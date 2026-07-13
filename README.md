@@ -154,7 +154,9 @@ AQWikiTools/
 │   ├── scripts/
 │   │   ├── background.js           # Service worker — proxies fetch requests to wiki & Artix
 │   │   ├── content.js              # Content script — hover previews, calculators, dark mode, owned badges, boost banners
-│   │   ├── inventory-sync.js       # Content script — syncs inventory from account.aq.com to chrome.storage
+│   │   ├── inventory-matching.js   # Shared canonical item-name matching helpers
+│   │   ├── ProcessAcountItems.js   # Updated AqwDoIHave API fetch, translation, and formatting helpers
+│   │   ├── main.js                 # Account-page sync orchestration for AQWikiTools storage
 │   │   ├── popup.js                # Popup controller — settings, theme toggles, sync status, boost display
 │   │   └── farm-tracker.js         # Farm Tracker logic — tabs, filters, modals, pagination, charts
 │   │
